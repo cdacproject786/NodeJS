@@ -2,24 +2,18 @@ const { verify, decode } = require('jsonwebtoken')
 
 module.exports = {
     checkToken: (req,res,next) => {
-        let token = req.get('authorization')
+        let token = req.headers['authorization']
         if(token){
             token = token.slice(7)
-            verify(token,process.env.PRIVATEKEY,(err,decoded) => {
+            verify(token,process.env.ACCESS_TOKEN_SECRET,(err,decoded) => {
                 if(err){
-                    res.json({
-                        success: 0,
-                        message: "Invalid Token"
-                    })
+                    res.sendStatus(403) //invalid token forbiiden to access
                 }else{
                     next()
                 }
             })
         }else{
-            res.json({
-                success: 0,
-                message: "Access denied! Unauthorized user"
-            })
+            res.sendStatus(401)
         }
     }
 }

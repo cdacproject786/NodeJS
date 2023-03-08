@@ -25,28 +25,28 @@ module.exports = {
                                 console.log(error)
                             }
                             console.log(imageURL)
-                        pool.execute(
-                            `insert into patient_primary(profile_photo,fname, lname, 
-                                email, pwd, date_of_birth, 
-                                phone,gender,adhaar_card,
-                                marital_status,occupation,
-                                address_id,
-                                security_questions_answer) 
-                            values('${imageURL}','${data.fname}','${data.lname}',
-                            '${data.email}','${data.pwd}','${data.date_of_birth}',
-                            '${data.phone}','${data.gender}','${data.adhaar_card}',
-                            '${data.marital_status}','${data.occupation}',
-                            '${add_id}',
-                            '${data.security_questions_answer}')`,
-                            (error, primaryresult) => {
-                                if(error){
-                                    return callBack(error)
+                            pool.execute(
+                                `insert into patient_primary(profile_photo,fname, lname, 
+                                    email, pwd, date_of_birth, 
+                                    phone,gender,adhaar_card,
+                                    marital_status,occupation,
+                                    address_id,
+                                    security_questions_answer) 
+                                values('${imageURL}','${data.fname}','${data.lname}',
+                                '${data.email}','${data.pwd}','${data.date_of_birth}',
+                                '${data.phone}','${data.gender}','${data.adhaar_card}',
+                                '${data.marital_status}','${data.occupation}',
+                                '${add_id}',
+                                '${data.security_questions_answer}')`,
+                                (error, primaryresult) => {
+                                    if(error){
+                                        return callBack(error)
+                                    }
+                                    
+                                    return callBack(null,primaryresult)
                                 }
-                                
-                                return callBack(null,primaryresult)
-                            }
-                
-                        )
+                    
+                            )
                         })
                     }
                 )
@@ -71,19 +71,25 @@ module.exports = {
             }
         )
     },
-    createPatientMedLogService: (medlogbody,labReportcallBack) => {
-        pool.execute(
-            `insert into patient_med_log 
-            (PRESCRIPTION,LAB_REPORT,DRUG_NAME,
-                MORNING,AFTERNOON,EVENING,UID) 
-            values
-            ('${logbody.prescription}','${logbody.lab_report}','${logbody.drug_name}',
-            '${logbody.morning}','${logbody.afternoon}','${logbody.evening}','${logbody.uid}')`,
-            (error,logresult) => {
-                if(error){
-                    return callBack(error)
+    createPatientMedLogService: (medlogbody,labReport,callBack) => {
+        cloud(labReport,(error,labReportImageURL) => { // uploading image to cloudinary
+            if(error){
+                console.log(error)
+            }
+            pool.execute(
+                `insert into patient_med_log 
+                (PRESCRIPTION,LAB_REPORT,DRUG_NAME,
+                    MORNING,AFTERNOON,EVENING,UID) 
+                values
+                ('${medlogbody.prescription}','${labReportImageURL}','${medlogbody.drug_name}',
+                '${parseInt(medlogbody.morning)}','${parseInt(medlogbody.afternoon)}','${parseInt(medlogbody.evening)}','${parseInt(medlogbody.uid)}')`,
+                (error,logresult) => {
+                    if(error){
+                        return callBack(error)
+                    }
+                    return callBack(null,logresult)
                 }
-                return callBack(null,logresult)
+            )
             }
         )
     },
@@ -107,7 +113,6 @@ module.exports = {
                 if(error){
                     return callBack(error)
                 }
-                
                 return callBack(null,loginresult[0])
             }
         )
@@ -116,7 +121,7 @@ module.exports = {
     getPatientMedLogService: (MedLogUID,callBack) => {
         pool.execute(
             `select * from patient_med_log 
-            where uid = '${MedLogUID.uid}'`,
+            where uid = '${parseInt(MedLogUID)}'`,
             (error, MedLogResult) => {
                 if(error){
                     return callBack(error)
@@ -124,7 +129,48 @@ module.exports = {
                 return callBack(null,MedLogResult)
             }
         )
+    },
+
+    getPatientMedRecordService: (MedRecordID,callBack) => {
+        pool.execute(
+            `select * from patient_med_record
+            where med_record_id = '${parseInt(MedRecordID)}'`,
+            (error,MedRecordResult) => {
+                if(error){
+                    return callBack(error)
+                }
+                return callBack(null,MedRecordResult[0])
+            }
+        )
+    },
+
+    forgotPasswordService: (email,callBack) => {
+        pool.execute(
+            `select * from patient_primary
+            where email = '${email}'`,
+            (error,emailResult) => {
+                if(error){
+                    return callBack(error)
+                }
+                return callBack(null,emailResult[0])
+            }
+        )
     }
+    ,
+    addOTP: (otp,email,callBack) => {
+        pool.execute(
+            `update patient_primary 
+            set otp = '${otp}' where email = '${email}'`,
+            (error,otpAddResult) => {
+                if(error){
+                    callBack(error)
+                }
+                return callBack(null,otpAddResult)
+            }
+        )
+    }
+    
+        
 
 
 
