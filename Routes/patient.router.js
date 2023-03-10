@@ -1,4 +1,4 @@
-const { forgotPasswordController, createPatientPrimaryController, patientLoginController , getPatientPrimaryDetailsController, createPatientMedLogController, createPatientMedRecordController, getPatientMedRecordController, getPatientMedLogController } = require('../Controller/patient.controller')
+const { resetPasswordController,otpValidateController,updateProfileController ,forgotPasswordController, createPatientPrimaryController, patientLoginController , getPatientPrimaryDetailsController, createPatientMedLogController, createPatientMedRecordController, getPatientMedRecordController, getPatientMedLogController, getPatientAddressDetailsController } = require('../Controller/patient.controller')
 const { checkToken } = require('../auth/token_validation')
 
 const router = require('express').Router()
@@ -11,11 +11,19 @@ router.post('/patient/medrecordINS',checkToken, createPatientMedRecordController
 
 //retrieve
 router.get('/patient/getPatientPrimaryDetails/:id', checkToken, getPatientPrimaryDetailsController)  // JWT validation
+router.get('/patient/getaddressDetails/:id', checkToken, getPatientAddressDetailsController)
 router.get('/patient/getMedRecordDetails/:id',checkToken, getPatientMedRecordController) // JWT validation
 router.get('/patient/getMedLogDetails/:id', checkToken, getPatientMedLogController)
 
+//update
+router.post('/patient/updateProfile',checkToken,updateProfileController)
+
+
 //forgot password
 router.post('/patient/forgotpassword',forgotPasswordController)
+router.post('/patient/otpValidate',otpValidateController)
+router.post('/patient/resetPassword',resetPasswordController)
+
 
 
 module.exports = router;

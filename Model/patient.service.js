@@ -2,78 +2,158 @@ const pool = require('../config/database')
 const { cloud } = require('../Model/cloud.service')
 
 module.exports = {
+    otpValidateService: (body,callBack) => {
+        pool.execute(
+            `select * from patient_primary 
+            where email='${body.email}' and otp='${body.otp}'`,
+            (error,result) => {
+                if(error){
+                    callBack(error)
+                }
+                return callBack(null,result[0])
+            }
+        )
+    },
 
-    createPatientPrimaryService : (image,data,callBack) => {
+    resetPasswordService: (body,callBack) =>{
+        pool.execute(
+            `update patient_primary 
+            set pwd=${body.pwd}
+            where email=${body.email}`,
+            (error,resetPwd) => {
+                if(error){
+                    callBack(error)
+                }
+                return callBack(null,resetPwd)
+            }
+        )
+    },
+    updateProfileWithoutPhotoService: (data, callBack) => {
+        pool.execute(   //inserting address info in address table
+            `update address
+            set address_line_1 = '${data.address_line_1}' , user_state = '${data.user_state}',
+                city = '${data.city}',pincode = '${data.pincode}' ,country = '${data.country}'
+                where address_id = '${data.address_id}'`,
+            (error, updateaddressresult) => {
+                if (error) {
+                    return callBack(error)
+                }
+                pool.execute(
+                    `update patient_primary
+                    set fname = '${data.fname}', lname = '${data.lname}', 
+                        email = '${data.email}', date_of_birth = '${data.date_of_birth}', 
+                        phone = '${data.phone}',gender = '${data.gender}',adhaar_card = '${data.adhaar_card}',
+                        marital_status = '${data.marital_status}',occupation = '${data.occupation}'
+                        where uid = '${data.uid}'`,
+                    (error, updateprimaryresult) => {
+                        if (error) {
+                            return callBack(error)
+                        }
+
+                        return callBack(null, updateprimaryresult)
+                    }
+
+                )
+
+            }
+        )
+    },
+    updateProfileWithPhotoService: (imageURL, data, callBack) => {
+        pool.execute(   //inserting address info in address table
+            `update address
+            set address_line_1 = '${data.address_line_1}' , user_state = '${data.user_state}',
+                city = '${data.city}',pincode = '${data.pincode}' ,country = '${data.country}'
+                where address_id = '${data.address_id}'`,
+            (error, updateaddressresult) => {
+                if (error) {
+                    return callBack(error)
+                }
+                pool.execute(
+                    `update patient_primary
+                    set fname = '${data.fname}', lname = '${data.lname}', 
+                        email = '${data.email}', date_of_birth = '${data.date_of_birth}', 
+                        phone = '${data.phone}',gender = '${data.gender}',adhaar_card = '${data.adhaar_card}',
+                        marital_status = '${data.marital_status}',occupation = '${data.occupation}',
+                        profile_photo = '${imageURL}'
+                        where uid = '${data.uid}'`,
+                    (error, updateprimaryresult) => {
+                        if (error) {
+                            return callBack(error)
+                        }
+
+                        return callBack(null, updateprimaryresult)
+                    }
+
+                )
+
+            }
+        )
+    },
+    createPatientPrimaryService: (data, callBack) => {
         pool.execute(   //inserting address info in address table
             `insert into address(address_line_1,user_state,
                 city,pincode,country)
             values('${data.address_line_1}','${data.user_state}',
             '${data.city}','${data.pincode}','${data.country}')`,
             (error, addressresult) => {
-                if(error){
+                if (error) {
                     return callBack(error)
                 }
                 pool.execute(   // selecting address_Id from address table
-                    'select address_id from `address` where `address_line_1` = ?',[data.address_line_1],
+                    'select address_id from `address` where `address_line_1` = ?', [data.address_line_1],
                     (error, addresult) => {
-                        if(error){
+                        if (error) {
                             return callBack(error)
                         }
                         var add_id = addresult[0].address_id
-                        cloud(image,(error,imageURL) => { // uploading image to cloudinary
-                            if(error){
-                                console.log(error)
-                            }
-                            console.log(imageURL)
-                            pool.execute(
-                                `insert into patient_primary(profile_photo,fname, lname, 
+                        pool.execute(
+                            `insert into patient_primary(fname, lname, 
                                     email, pwd, date_of_birth, 
                                     phone,gender,adhaar_card,
                                     marital_status,occupation,
                                     address_id,
                                     security_questions_answer) 
-                                values('${imageURL}','${data.fname}','${data.lname}',
+                                values('${data.fname}','${data.lname}',
                                 '${data.email}','${data.pwd}','${data.date_of_birth}',
                                 '${data.phone}','${data.gender}','${data.adhaar_card}',
                                 '${data.marital_status}','${data.occupation}',
                                 '${add_id}',
                                 '${data.security_questions_answer}')`,
-                                (error, primaryresult) => {
-                                    if(error){
-                                        return callBack(error)
-                                    }
-                                    
-                                    return callBack(null,primaryresult)
+                            (error, primaryresult) => {
+                                if (error) {
+                                    return callBack(error)
                                 }
-                    
-                            )
-                        })
-                    }
-                )
+
+                                return callBack(null, primaryresult)
+                            }
+
+                        )
+                    })
             }
         )
     },
-    createPatientMedRecordService: (medbody,callBack) => {
+    createPatientMedRecordService: (medbody, callBack) => {
         pool.execute(
             `insert into patient_med_record
             (BLOOD_PRESSURE,WEIGHT,SUGAR_LEVEL,BLOOD_GROUP,
                 DISABILITY,INSURANCE_ID,INSURANCE_NAME,
-                INSURANCE_EXPIRE_DATE,ABHA_NUMBER)
+                INSURANCE_EXPIRE_DATE,ABHA_NUMBER,UID)
              values
              ('${medbody.blood_pressure}','${medbody.weight}','${medbody.sugar_level}','${medbody.blood_group}',
              '${medbody.disability}','${medbody.insurance_id}','${medbody.insurance_name}',
-             '${medbody.insurance_expire_date}','${medbody.abha_number}')`,
-            (error,medrecordresult) => {
-                if(error){
+             '${medbody.insurance_expire_date}','${medbody.abha_number}','${medbody.uid}')`,
+            (error, medrecordresult) => {
+                if (error) {
                     return callBack(error)
                 }
+                
                 return callBack(null,medrecordresult)
             }
         )
     },
-    createPatientMedLogService: (medlogbody,labReport,callBack) => {
-        cloud(labReport,(error,labReportImageURL) => { // uploading image to cloudinary
-            if(error){
+    createPatientMedLogService: (medlogbody, labReport, callBack) => {
+        cloud(labReport, (error, labReportImageURL) => { // uploading image to cloudinary
+            if (error) {
                 console.log(error)
             }
             pool.execute(
@@ -83,94 +163,105 @@ module.exports = {
                 values
                 ('${medlogbody.prescription}','${labReportImageURL}','${medlogbody.drug_name}',
                 '${parseInt(medlogbody.morning)}','${parseInt(medlogbody.afternoon)}','${parseInt(medlogbody.evening)}','${parseInt(medlogbody.uid)}')`,
-                (error,logresult) => {
-                    if(error){
+                (error, logresult) => {
+                    if (error) {
                         return callBack(error)
                     }
-                    return callBack(null,logresult)
+                    return callBack(null, logresult)
                 }
             )
-            }
+        }
         )
     },
 
-    getPatientPrimaryDetailsService: (uid,callBack) => {
+    getPatientPrimaryDetailsService: (uid, callBack) => {
         pool.execute(
-            `select * from patient_primary where uid = '${uid}'`, 
-            (error,primaryresult) => {
-                if(error){
+            `select * from patient_primary where uid = '${uid}'`,
+            (error, primaryresult) => {
+                if (error) {
                     return callBack(error)
                 }
-                return callBack(null,primaryresult[0])
+                return callBack(null, primaryresult[0])
+            }
+        )
+    },
+    getPatientAddressDetailsService: (add_id, callBack) => {
+        pool.execute(
+            `select * from address where address_id = '${add_id}'`,
+            (error, addressresult) => {
+                if (error) {
+                    return callBack(error)
+                }
+                return callBack(null, addressresult[0])
             }
         )
     },
 
-    getPatientLoginService : (loginbody,callBack) => {
+    getPatientLoginService: (loginbody, callBack) => {
         pool.execute(
             `select * from patient_primary where email = '${loginbody.email}' and pwd = '${loginbody.pwd}'`,
-            (error,loginresult) => {
-                if(error){
+            (error, loginresult) => {
+                if (error) {
                     return callBack(error)
                 }
-                return callBack(null,loginresult[0])
+                return callBack(null, loginresult[0])
             }
         )
     },
 
-    getPatientMedLogService: (MedLogUID,callBack) => {
+    getPatientMedLogService: (MedLogUID, callBack) => {
         pool.execute(
             `select * from patient_med_log 
             where uid = '${parseInt(MedLogUID)}'`,
             (error, MedLogResult) => {
-                if(error){
+                if (error) {
                     return callBack(error)
                 }
-                return callBack(null,MedLogResult)
+                return callBack(null, MedLogResult)
             }
         )
     },
 
-    getPatientMedRecordService: (MedRecordID,callBack) => {
+    getPatientMedRecordService: (uid, callBack) => {
         pool.execute(
             `select * from patient_med_record
-            where med_record_id = '${parseInt(MedRecordID)}'`,
-            (error,MedRecordResult) => {
-                if(error){
+            where uid = '${parseInt(uid)}'`,
+            (error, MedRecordResult) => {
+                if (error) {
                     return callBack(error)
                 }
-                return callBack(null,MedRecordResult[0])
+                return callBack(null, MedRecordResult[0])
             }
         )
     },
 
-    forgotPasswordService: (email,callBack) => {
+    forgotPasswordService: (email, callBack) => {
         pool.execute(
             `select * from patient_primary
             where email = '${email}'`,
-            (error,emailResult) => {
-                if(error){
+            (error, emailResult) => {
+                if (error) {
                     return callBack(error)
                 }
-                return callBack(null,emailResult[0])
+                return callBack(null, emailResult[0])
             }
         )
     }
     ,
-    addOTP: (otp,email,callBack) => {
+    addOTP: (otp, email, callBack) => {
         pool.execute(
             `update patient_primary 
             set otp = '${otp}' where email = '${email}'`,
-            (error,otpAddResult) => {
-                if(error){
+            (error, otpAddResult) => {
+                if (error) {
                     callBack(error)
                 }
-                return callBack(null,otpAddResult)
+                return callBack(null, otpAddResult)
             }
         )
     }
-    
-        
+
+
 
 
 
