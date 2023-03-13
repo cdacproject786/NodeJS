@@ -58,7 +58,7 @@ module.exports = {
             }
         )
     },
-    updateProfileWithPhotoService: (imageURL, data, callBack) => {
+    updateProfileWithPhotoService: ( data, callBack) => {
         pool.execute(   //inserting address info in address table
             `update address
             set address_line_1 = '${data.address_line_1}' , user_state = '${data.user_state}',
@@ -68,23 +68,32 @@ module.exports = {
                 if (error) {
                     return callBack(error)
                 }
-                pool.execute(
-                    `update patient_primary
-                    set fname = '${data.fname}', lname = '${data.lname}', 
-                        email = '${data.email}', date_of_birth = '${data.date_of_birth}', 
-                        phone = '${data.phone}',gender = '${data.gender}',adhaar_card = '${data.adhaar_card}',
-                        marital_status = '${data.marital_status}',occupation = '${data.occupation}',
-                        profile_photo = '${imageURL}'
-                        where uid = '${data.uid}'`,
-                    (error, updateprimaryresult) => {
-                        if (error) {
-                            return callBack(error)
-                        }
-
-                        return callBack(null, updateprimaryresult)
+                const imageresult = cloud(data.profile_photo, (error,result) => {
+                    if(error){
+                        console.log(error)
+                    }else{
+                        console.log("Image Url -> ")
+                        console.log(result)
+                        pool.execute(
+                            `update patient_primary
+                            set fname = '${data.fname}', lname = '${data.lname}', 
+                                email = '${data.email}', date_of_birth = '${data.date_of_birth}', 
+                                phone = '${data.phone}',gender = '${data.gender}',adhaar_card = '${data.adhaar_card}',
+                                marital_status = '${data.marital_status}',occupation = '${data.occupation}',
+                                profile_photo = '${result}'
+                                where uid = '${data.uid}'`,
+                            (error, updateprimaryresult) => {
+                                if (error) {
+                                    return callBack(error)
+                                }
+        
+                                return callBack(null, updateprimaryresult)
+                            }
+        
+                        )
                     }
-
-                )
+                })
+                
 
             }
         )

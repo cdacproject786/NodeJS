@@ -1,63 +1,65 @@
-const { resetPasswordService,otpValidateService,getPatientAddressDetailsService, updateProfileWithoutPhotoService,updateProfileWithPhotoService,createPatientPrimaryService, getPatientLoginService, getPatientPrimaryDetailsService, createPatientMedRecordService, createPatientMedLogService, getPatientMedLogService, getPatientMedRecordService, forgotPasswordService, addOTP } = require('../Model/patient.service')
+const { resetPasswordService, otpValidateService, getPatientAddressDetailsService, updateProfileWithoutPhotoService, updateProfileWithPhotoService, createPatientPrimaryService, getPatientLoginService, getPatientPrimaryDetailsService, createPatientMedRecordService, createPatientMedLogService, getPatientMedLogService, getPatientMedRecordService, forgotPasswordService, addOTP } = require('../Model/patient.service')
 const { SHA1 } = require('crypto-js')
 const { sign } = require('jsonwebtoken')
 
 const { sendMailTo } = require('../Model/mail.service')
 const { generateOTP } = require('../config/otp')
 module.exports = {
-    resetPasswordController: (req,res) =>{
-        const body=req.body
+    resetPasswordController: (req, res) => {
+        const body = req.body
         body.pwd = '' + SHA1(body.pwd)
-            resetPasswordService(body,(err,resetPwd) => {
-                if(err){
-                    res.sendStatus(500)
-                }
-                else
+        resetPasswordService(body, (err, resetPwd) => {
+            if (err) {
+                res.sendStatus(500)
+            }
+            else
                 var TO = body.email
-                var SUBJECT = "Reset Password Succecssfully"
-                var TEXT = `Mrs/Mr ${body.fname} ${body.lname} your password updated Successfully.`
-                sendMailTo(TO, SUBJECT, TEXT)
-            })
+            var SUBJECT = "Reset Password Succecssfully"
+            var TEXT = `Mrs/Mr ${body.fname} ${body.lname} your password updated Successfully.`
+            sendMailTo(TO, SUBJECT, TEXT)
+            res.status(200).json(resetPwd)
+        })
 
-      
+
     },
-    otpValidateController: (req,res) =>{
+    otpValidateController: (req, res) => {
         const body = req.body
         otpValidateService(body, (err, result) => {
-            if(err){
-                res.sendStatus(400)
+            if (err) {
+                res.sendStatus(500)
             }
-            if(!result){
-                res.sendStatus(401) 
+            if (!result) {
+                res.sendStatus(401)
             }
-            if(result){
-               res.status(200).json(result)
-               
+            if (result) {
+                res.status(200).json(result)
+
             }
         })
     },
-    updateProfileController: (req,res) => {
+    updateProfileController: (req, res) => {
+        console.log(req.body)
         const body = req.body
-        if(req.files.profile_photo){
-            const image = req.files.profile_photo
-            updateProfileWithPhotoService(image.tempFilePath,body, (err, updateProfileWithPhotoResult) => {
+        if (req.body.profile_photo != undefined) {
+            
+            updateProfileWithPhotoService(body, (err, updateProfileWithPhotoResult) => {
                 if (err) {
                     console.log(err)
                     return res.sendStatus(500)
                 }
-                return res.status(201).json(updateProfileWithPhotoResult)
+                return res.status(201)
             })
         }
-        if(!req.files.profile_photo){
-            updateProfileWithoutPhotoService(body, (err, updateProfileWithoutPhotoResult) => {
-                if (err) {
-                    console.log(err)
-                    return res.sendStatus(500)
-                }
-                return res.status(201).json(updateProfileWithoutPhotoResult)
-            })
-        }
-        
+
+        updateProfileWithoutPhotoService(body, (err, updateProfileWithoutPhotoResult) => {
+            if (err) {
+                console.log(err)
+                return res.sendStatus(500)
+            }
+            return res.status(201).json(updateProfileWithoutPhotoResult)
+        })
+
+
     },
     createPatientPrimaryController: (req, res) => {
         console.log(req.body)
@@ -95,6 +97,7 @@ module.exports = {
     },
 
     createPatientMedLogController: (req, res) => {
+        console.log(req.body)
         const medLogBody = req.body
         const labReportImage = req.files.lab_report
         createPatientMedLogService(medLogBody, labReportImage.tempFilePath, (err, medLogResult) => {
@@ -195,8 +198,8 @@ module.exports = {
                 //const refreshToken = sign({ result : results }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '1d' })
                 //create column for refreshToken in patient_primary to save refreshToken
                 //service function to save refreshToken in patient_primary
-                
-                
+
+
                 //sending cookie through httpOnly so it can't be accessed by javascript
                 //res.cookie('jwt', refreshToken, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 })// 1 day
                 res.status(200).json({ accessToken, uid, medrecordid })
@@ -204,25 +207,28 @@ module.exports = {
         })
     },
 
-    forgotPasswordController: (req,res) => {
+    forgotPasswordController: (req, res) => {
+        console.log(req.body)
         const email = req.body.email
         forgotPasswordService(email, (err, forgotResult) => {
-            if(err){
+            if (err) {
                 res.sendStatus(500)
             }
-            if(!forgotResult){
+            if (!forgotResult) {
                 res.sendStatus(404)
             }
-            if(forgotResult){
+            if (forgotResult) {
                 otpGenerated = generateOTP()
-                addOTP(otpGenerated,email,(err,addOTPResult) => {
-                    if(err){
+                addOTP(otpGenerated, email, (err, addOTPResult) => {
+                    if (err) {
                         res.sendStatus(500)
+                    } else if (addOTPResult) {
+                        var TO = email
+                        var SUBJECT = "MedLog Registration Forgot Password"
+                        var TEXT = `OTP for forgot password is {${otpGenerated}}.`
+                        sendMailTo(TO, SUBJECT, TEXT)
+                        res.status(201).json(addOTPResult)
                     }
-                    var TO = email
-                    var SUBJECT = "MedLog Registration Forgot Password"
-                    var TEXT = `OTP for forgot password is {${otpGenerated}}.`
-                    sendMailTo(TO, SUBJECT, TEXT)
                 })
             }
         })
